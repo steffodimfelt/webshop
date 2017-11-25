@@ -10,12 +10,20 @@ include_once "../functions/print_tables.php";
   <?PHP include_once "../admin/header.php"; ?>
 
 <?PHP
-if ($_SESSION['cart_session_hash']==null){$_SESSION['cart_session_hash'] = password_hash($date, PASSWORD_BCRYPT);}
+if ($_SESSION['cart_session_hash']==null)
+{
+  $date = new DateTime();$date_out = $date->format('Y-m-d H:i:s');
+  $_SESSION['cart_session_hash'] = password_hash($date_out, PASSWORD_BCRYPT);
+}
 
 //Om man inte har något customer_id
 if ($_SESSION['customer_id'] >0){}else{$_SESSION['customer_id'] = 0;}
 
-
+if (isset($_POST['Delete']))
+{
+  $cart_id= $_POST['cart_id'];
+  $sql_delete = $conn->query("DELETE FROM cart WHERE cart_id=".$cart_id);
+}
 
 if ( isset( $_POST['Buy'] ) )
 {
@@ -40,24 +48,19 @@ $cart_sql = "SELECT * FROM cart ORDER BY cart_id";
    $sql_delete = $conn->query("DELETE FROM cart WHERE cart_customer_id=".$purchased_customer_id );
  }
 
-echo '<script>window.location.href = "thank_you.php";</script>';
+//echo '<script>window.location.href = "thank_you.php";</script>';
 
 }
 
 
 ?>
 
+
 </head>
 <body>
 <?PHP //include_once "admin_navbar.php"; ?>
   <div class="outer_container pt-4 px-5"><h1 class="text-center">Din varukorg</h1>
-
-<?PHP //echo "cart session hash ".$_SESSION['cart_session_hash'];?>
-
-<?PHP //echo "customer id ".$_SESSION['customer_id']; ?>
-
-<?PHP // echo $cart_hash_date; ?>
-
+  <div id='response' class='mb-3'></div>
 <?PHP require "cart_remove_old_products.php"; ?>
 
 
@@ -74,13 +77,7 @@ echo '<script>window.location.href = "thank_you.php";</script>';
 
 
  }else{
-   //echo "har kundid: ".$_SESSION['customer_id'] ;
 
-   //Change all orders in cart to new customer_id
-
-  // loopa igenom jämför hash ändra id.
-    //ändra id (ifall man vill fortsätta köpa.)
-//  echo $_SESSION['cart_session_hash'];
   $cart_session_hash_out = $_SESSION['cart_session_hash'];
   $customer_session_id_out = $_SESSION['customer_id'];
   $total_sum=0;
@@ -92,6 +89,7 @@ echo '<script>window.location.href = "thank_you.php";</script>';
   $purchased_costs="";
   $purchased_quantity="";
   $purchased_date="";
+  $purchased_posts=0;
   $date = new DateTime();$date_out = $date->format('Y-m-d H:i:s');
 
     echo "<table class='table table-hover table-striped'>";
@@ -124,9 +122,9 @@ echo '<script>window.location.href = "thank_you.php";</script>';
           $color_print= mysqli_query($conn,"SELECT * FROM color WHERE color_id=".$products_row['product_color']);
           while($color_print_row = $color_print ->fetch_assoc()){$color_print_out = $color_print_row['color_name'];}
 
-          $purchased_products=$purchased_products.$products_row['product_name'].",";
-          $purchased_costs=$purchased_costs.$products_row['product_cost'].",";
-          $purchased_quantity=$purchased_quantity.$cart_row['cart_product_quantity'].",";
+          $purchased_products=$purchased_products.$products_row['product_name'].", ".$color_print_out.";";
+          $purchased_costs=$purchased_costs.$products_row['product_cost'].";";
+          $purchased_quantity=$purchased_quantity.$cart_row['cart_product_quantity'].";";
 
           echo "<tr>
                   <td ><img style='width:6rem;' class='img-thumbnail' src='../images/".$products_row['product_image1']."'></td>
@@ -134,9 +132,18 @@ echo '<script>window.location.href = "thank_you.php";</script>';
                   <td class='text-center'>".$color_print_out."</td>
                   <td class=' text-center'>".$cart_row['cart_product_quantity']."</td>
                   <td class=' text-right'>".$products_row['product_cost']."kr</td>
-                  <td><a href='product_card.php?product_id=".$rad['product_id']."' class='btn btn-outline-danger'>Ta bort</td>
+                  <td>";
+          ?>
+
+                    <form action="<?php echo htmlentities($_SERVER['PHP_SELF']); ?>" method="post">
+                      <input type='hidden' id='cart_id' name='cart_id' value="<?php echo $cart_row['cart_id']; ?>">
+                      <button type='submit' Name = 'Delete'  class='btn btn-danger '>Ta bort</button>
+                    </form>
+
+        <?PHP  echo "  </td>
               </tr>";
           $total_sum = $total_sum + ($products_row['product_cost']*$cart_row['cart_product_quantity']);
+          $purchased_posts++; //räknar antal poster för att avgöra om köp-knappen ska visas eller döljas.
         }
     }
    }
@@ -148,9 +155,9 @@ echo "</table>";
 
 
 //Tar bort sista kommatecknet.
-$purchased_products = rtrim($purchased_products,",");
-$purchased_costs = rtrim($purchased_costs,",");
-$purchased_quantity = rtrim($purchased_quantity,",");
+$purchased_products = rtrim($purchased_products,";");
+$purchased_costs = rtrim($purchased_costs,";");
+$purchased_quantity = rtrim($purchased_quantity,";");
  }
 ?>
 
@@ -161,49 +168,41 @@ $purchased_quantity = rtrim($purchased_quantity,",");
   <input type="hidden" id="purchased_quantity" name="purchased_quantity"  value="<?PHP echo $purchased_quantity ?>">
   <input type="hidden" id="purchased_total_sum" name="purchased_total_sum"  value="<?PHP echo $total_sum ?>">
   <input type="hidden" id="purchased_date" name="purchased_date"  value="<?PHP echo $date_out ?>">
-  <button type='submit' Name = 'Buy'  class='btn btn-success '>Köp nu</button>
+  <?PHP
+    if ($purchased_posts>0)
+    {
+      echo "<button type='submit' Name = 'Buy'  class='btn btn-success '>Köp nu</button>";
+    }else{
+      echo "<button type='submit' class='btn btn-warning disabled'>Det finns inga artiklar i varukorgen</button>";
+    }
+
+  ?>
 </div>
 </form>
 </div>
-<?PHP include_once "footer.php"; ?>
-</body>
-</html>
 
+  <?PHP include_once "../admin/footer.php"; ?>
 
+  <?PHP
+    if (isset($_POST['Delete']))
+    {
+      echo "<script>
+        $(function (){
+          $('#response').html(\"<div id='response-add' class='bg-warning text-white response_hide text-center p-2'>Artikeln är borttagen.</div>\");
+        });
+      </script>";
+    }
 
-
-
-<?PHP
-/*
-$date = date("Y-m-d H:i:s", time() - 3600);// en timme bakåt.
-
-
-set session timestamp - CHECK
-gör om timestamp till bcrypt - CHECK
-
-gör en funktion som rullar igenom Varukorgen
-via datumkoll - är varan äldre än aktuell tid - ta bort
-borttagen vara läggs tillbaka i rätt produkt - CHECK
-
-
-
-jämför noll-kund
-checka att kunden har id-nummer
-om inte måste man fylla i ett formulär. - CHECK
-
-om kunden inte har id nummer från början.
-alla id 0 med session-nummer ändras i varukorgen efter man har registrerat sig.
-
-vid checkout
-ta alla produkter som har samma session och id-nummer
-lägg ihop i purchesed tillsammans med rätt id.
-
-ta bort alla produkter som är färdiga.
-
-tack för köpet.
-
-
-Markulera en lagd produkut = ta bort
-*/
+    if (isset($_POST['Buy']))
+    {
+      echo "<script>
+        $(function (){
+          $('#response').html(\"<div id='response-add' class='bg-success text-white response_hide text-center p-2'>Tack för din beställning!</div>\");
+        });
+      </script>";
+    }
 
 ?>
+
+</body>
+</html>
