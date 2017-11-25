@@ -51,8 +51,8 @@ include_once "../functions/print_tables.php";
     <div class="card m-2 bg-primary text-white">
       <h4 class="card-title px-3 pt-2">Orderhantering</h4>
       <ul class="list-group list-group-flush">
-          <li class="list-group-item"><a class="card-link" href="">Uppdatera ordrar</a></li>
-          <li class="list-group-item"><a class="card-link" href="">Lägg till order</a></li>
+          <li class="list-group-item"><a class="card-link" href="cart_all_list.php">Lista varukorg</a></li>
+          <li class="list-group-item"><a class="card-link" href="purchased_all_list.php">Lista lagda ordrar</a></li>
       </ul>
     </div>
 
