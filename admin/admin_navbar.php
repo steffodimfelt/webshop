@@ -51,6 +51,7 @@
           </a>
           <div class="dropdown-menu" aria-labelledby="order_drop">
             <a class="dropdown-item" href="cart_all_list.php">Lista varukorg</a>
+            <a class="dropdown-item" href="purchased_all_list.php">Lista lagda ordrar</a>
           </div>
         </li>
 
